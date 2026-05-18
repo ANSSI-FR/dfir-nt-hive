@@ -1,0 +1,27 @@
+[package]
+name = "anssi-nt-hive"
+version = "2.0.0-beta1"
+authors = ["Adrien SALAIS"]
+description = "Fork of https://github.com/ColinFinck/nt-hive library to add some forensic capabilities"
+homepage = "https://github.com/ANSSI-FR/dfir-nt-hive"
+repository = "https://github.com/ANSSI-FR/dfir-nt-hive"
+documentation = "https://github.com/ANSSI-FR/dfir-nt-hive"
+readme = "README.md"
+edition = "2021"
+rust-version = "1.81"
+license = "GPL-2.0-or-later"
+keywords = ["windows", "nt", "registry", "hive", "regf"]
+categories = ["no-std", "os::windows-apis", "parser-implementations"]
+
+[dependencies]
+bitflags = "2.8.0"
+enumn = "0.1.14"
+memoffset = "0.9.1"
+thiserror = { version = "2.0.11", default-features = false }
+zerocopy = { version = "0.8.14", features = ["derive"] }
+
+
+[features]
+default = ["std"]
+alloc = []
+std = ["alloc", "thiserror/std"]
