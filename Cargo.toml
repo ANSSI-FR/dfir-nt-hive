@@ -1,7 +1,7 @@
 [package]
-name = "anssi-nt-hive"
+name = "dfir-nt-hive"
 version = "2.0.0-beta1"
-authors = ["Adrien SALAIS"]
+authors = ["ANSSI"]
 description = "Fork of https://github.com/ColinFinck/nt-hive library to add some forensic capabilities"
 homepage = "https://github.com/ANSSI-FR/dfir-nt-hive"
 repository = "https://github.com/ANSSI-FR/dfir-nt-hive"
