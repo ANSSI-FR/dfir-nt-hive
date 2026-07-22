@@ -210,7 +210,7 @@ where
     }
 
     /// Returns the root [`KeyNode`] of this hive.
-    pub fn root_key_node(&self) -> Result<KeyNode<B>> {
+    pub fn root_key_node(&self) -> Result<KeyNode<'_, B>> {
         let root_cell_offset = self.base_block.root_cell_offset.get();
         let cell_range = self.cell_range_from_data_offset(root_cell_offset)?;
         KeyNode::from_cell_range(self, cell_range)
@@ -384,7 +384,7 @@ where
         root_key_node.clear_volatile_subkeys()
     }
 
-    pub(crate) fn root_key_node_mut(&mut self) -> Result<KeyNodeMut<B>> {
+    pub(crate) fn root_key_node_mut(&mut self) -> Result<KeyNodeMut<'_, B>> {
         let root_cell_offset = self.base_block.root_cell_offset.get();
         let cell_range = self.cell_range_from_data_offset(root_cell_offset)?;
         KeyNodeMut::from_cell_range(self, cell_range)

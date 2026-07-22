@@ -464,12 +464,12 @@ where
     }
 
     /// Returns the class name of this Key Node (if any).
-    pub fn class_name(&self) -> Option<Result<NtHiveNameString>> {
+    pub fn class_name(&self) -> Option<Result<NtHiveNameString<'_>>> {
         self.item_range.class_name(self.hive)
     }
 
     /// Returns the name of this Key Node.
-    pub fn name(&self) -> Result<NtHiveNameString> {
+    pub fn name(&self) -> Result<NtHiveNameString<'_>> {
         self.item_range.name(self.hive)
     }
 
@@ -573,7 +573,7 @@ where
         Ok(())
     }
 
-    pub(crate) fn subkeys_mut(&mut self) -> Option<Result<SubKeyNodesMut<B>>> {
+    pub(crate) fn subkeys_mut(&mut self) -> Option<Result<SubKeyNodesMut<'_, B>>> {
         let cell_range = iter_try!(self.item_range.subkeys_cell_range(self.hive)?);
         Some(SubKeyNodesMut::new(self.hive, cell_range))
     }

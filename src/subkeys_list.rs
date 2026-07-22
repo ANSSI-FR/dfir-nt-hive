@@ -242,7 +242,7 @@ where
         }
     }
 
-    pub fn next(&mut self) -> Option<Result<KeyNodeMut<B>>> {
+    pub fn next(&mut self) -> Option<Result<KeyNodeMut<'_, B>>> {
         match self {
             Self::IndexRoot(iter) => iter.next(),
             Self::Leaf(iter) => iter.next(),
