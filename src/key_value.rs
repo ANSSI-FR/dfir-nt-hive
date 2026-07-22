@@ -16,7 +16,7 @@ use zerocopy::{
 use crate::big_data::{BigDataSlices, BIG_DATA_SEGMENT_SIZE};
 use crate::error::{NtHiveError, Result};
 use crate::helpers::byte_subrange;
-use crate::hive::Hive;
+use crate::hive::{Hive, HiveMinorVersion};
 use crate::string::NtHiveNameString;
 
 #[cfg(feature = "alloc")]
@@ -143,13 +143,19 @@ where
         Ref::from_bytes(&self.hive.data[self.header_range.clone()]).unwrap()
     }
 
-    ///Validate big data signature, always returns true if data size is smaller than the big segment size:[`BIG_DATA_SEGMENT_SIZE`].
+    fn uses_big_data(&self, data_size: usize) -> bool {
+        data_size > BIG_DATA_SEGMENT_SIZE
+            && self.hive.minor_version() >= HiveMinorVersion::WindowsXP as u32
+    }
+
+    /// Validates the big-data signature when this hive format uses segmented data.
     fn validate_data_signature(&self) -> Result<bool> {
         let header = self.header();
 
-        let data_size = header.data_size.get();
-        let data_size = (data_size & !DATA_STORED_IN_DATA_OFFSET) as usize;
-        if data_size > BIG_DATA_SEGMENT_SIZE {
+        let data_size_field = header.data_size.get();
+        let data_stored_in_data_offset = data_size_field & DATA_STORED_IN_DATA_OFFSET > 0;
+        let data_size = (data_size_field & !DATA_STORED_IN_DATA_OFFSET) as usize;
+        if !data_stored_in_data_offset && self.uses_big_data(data_size) {
             let cell_range = self
                 .hive
                 .cell_range_from_data_offset(header.data_offset.get())?;
@@ -183,8 +189,9 @@ where
             let data_end = data_start + data_size;
 
             Ok(KeyValueData::Small(&self.hive.data[data_start..data_end]))
-        } else if data_size <= BIG_DATA_SEGMENT_SIZE {
+        } else if !self.uses_big_data(data_size) {
             // The entire data is stored in a single cell referenced by `data_offset`.
+            // Legacy hive formats may keep values larger than one Big Data segment here.
             let cell_range = self
                 .hive
                 .cell_range_from_data_offset(header.data_offset.get())?;
@@ -201,8 +208,8 @@ where
 
             Ok(KeyValueData::Small(&self.hive.data[data_start..data_end]))
         } else {
-            // The data size exceeds what can be stored in a single cell.
-            // It's therefore stored in a Big Data structure referencing multiple cells.
+            // Format 1.5 and newer store data larger than one segment in a Big Data
+            // structure referencing multiple cells.
             let cell_range = self
                 .hive
                 .cell_range_from_data_offset(header.data_offset.get())?;
@@ -651,5 +658,32 @@ mod tests {
         assert_eq!(key_value.data_type().unwrap(), KeyValueDataType::RegBinary);
         assert!(matches!(key_value_data, KeyValueData::Small(_)));
         assert_eq!(key_value_data.into_vec().unwrap(), vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_regf_v13_large_value_uses_contiguous_cell() {
+        let user_hive = include_bytes!("../testdata/user.2008.dat");
+        let hive = Hive::new(&user_hive[..]).unwrap();
+        assert_eq!(hive.minor_version(), HiveMinorVersion::WindowsNT4 as u32);
+
+        let key_value = hive
+            .root_key_node()
+            .unwrap()
+            .subpath("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartPage")
+            .unwrap()
+            .unwrap()
+            .value("ProgramsCache")
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(key_value.data_type().unwrap(), KeyValueDataType::RegBinary);
+        assert_eq!(key_value.data_size(), 18_890);
+
+        match key_value.data().unwrap() {
+            KeyValueData::Small(data) => assert_eq!(data.len(), 18_890),
+            KeyValueData::Big(_) => panic!("REGF 1.3 values must remain contiguous"),
+        }
+
+        assert!(key_value.validate_signature().unwrap());
     }
 }
